@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Churn Prediction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Bulk Churn Prediction</h1>
+
+        <p class="text-center text-muted mt-2">
+            Upload a CSV file with customer data to get predictions for all customers at once.
+            <br>
+            <small>Required columns: <code>userId, gender, SeniorCitizen, Partner, Dependents, tenure, Contract, PaymentMethod</code></small>
+        </p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert alert-danger mt-3">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST" action="/bulk" enctype="multipart/form-data" class="mt-4">
+            <div class="mb-3">
+                <label for="file" class="form-label">Choose CSV File</label>
+                <input type="file" id="file" name="file" class="form-control" accept=".csv" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Upload & Predict</button>
+        </form>
+
+        {% if results %}
+        <div class="mt-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Prediction Results</h4>
+                <a href="/bulk/download" class="btn btn-success btn-sm">Download CSV</a>
+            </div>
+
+            <div class="row text-center mb-4">
+                <div class="col-md-4">
+                    <div class="border rounded p-3">
+                        <h5>{{ results | length }}</h5>
+                        <small class="text-muted">Total Customers</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3">
+                        <h5 class="text-danger">{{ results | selectattr('Churn_Prediction', 'equalto', 1) | list | length }}</h5>
+                        <small class="text-muted">Likely to Churn</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3">
+                        <h5 class="text-success">{{ results | selectattr('Churn_Prediction', 'equalto', 0) | list | length }}</h5>
+                        <small class="text-muted">Retained</small>
+                    </div>
+                </div>
+            </div>
+
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>User ID</th>
+                        <th>Prediction</th>
+                        <th>Churn Probability</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in results[:50] %}
+                    <tr>
+                        <td>{{ row.userId }}</td>
+                        <td>
+                            {% if row.Churn_Prediction == 1 %}
+                                <span class="badge bg-danger">Churn</span>
+                            {% else %}
+                                <span class="badge bg-success">No Churn</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ (row.Churn_Probability * 100) | round(2) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if results | length > 50 %}
+            <p class="text-muted text-center">Showing 50 of {{ results | length }} customers. Download the CSV for the full report.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="mt-4 text-center">
+            <a href="/" class="text-muted small">← Single Customer Prediction</a>
+        </div>
+    </div>
+</body>
+</html>
